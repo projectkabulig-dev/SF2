@@ -117,6 +117,11 @@ table.sum td:first-child{text-align:left}
 
 <!-- SCAN -->
 <section class="tab on" id="tab-scan">
+  <div class="card" id="unlock" style="display:none;border-color:var(--g)">
+    <h2>I-load ang klase</h2>
+    <p class="hint">May nakahandang listahan ng klase (naka-encrypt). Ilagay ang password para ma-load ito sa device na ito. Isang beses lang ito.</p>
+    <div class="row"><input id="pwIn" type="password" placeholder="Password" autocomplete="off" style="flex:1;min-width:160px"><button class="btn" id="pwBtn">I-load</button></div>
+  </div>
   <div class="card">
     <div class="row" style="justify-content:space-between">
       <div class="seg" id="modeSeg" role="group" aria-label="Session">
@@ -2618,6 +2623,7 @@ function doScan(raw){
   beep(true);renderScan();
 }
 function renderScan(){
+  checkPreload();
   $('sessChip').textContent=curSess()==='am'?'Umaga':'Hapon';
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   const d=todayStr(),rec=S.records[d]||{};
@@ -2830,6 +2836,24 @@ $('csvBtn').onclick=()=>{
 };
 
 /* ---------- init ---------- */
+const PRELOAD={"s": "w4iIXlwHqtYXJv3VpWUdSw==", "i": "s7H5rkhSRe2gqb+0", "n": 300000, "c": "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"};
+function checkPreload(){const u=$('unlock');if(u)u.style.display=(S.learners.length===0&&PRELOAD)?'block':'none'}
+async function unlockClass(){
+  const pw=$('pwIn').value.trim();if(!pw)return;
+  if(!(window.crypto&&crypto.subtle)){toast('Kailangan ng https:// para gumana ang password.');return}
+  try{
+    const b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+    const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+    const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b(PRELOAD.s),iterations:PRELOAD.n,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b(PRELOAD.i)},key,b(PRELOAD.c));
+    const d=JSON.parse(new TextDecoder().decode(pt));
+    Object.keys(d.settings||{}).forEach(k=>{if(!S.settings[k])S.settings[k]=d.settings[k]});
+    d.learners.forEach(l=>{if(!S.learners.some(x=>x.lrn===l.lrn))S.learners.push(l)});
+    save();$('pwIn').value='';renderHeader();renderScan();toast(d.learners.length+' learners ang na-load.');
+  }catch(e){toast('Mali ang password.')}
+}
+$('pwBtn').onclick=unlockClass;
+$('pwIn').addEventListener('keydown',e=>{if(e.key==='Enter')unlockClass()});
 renderHeader();renderScan();
 setInterval(()=>{if($('tab-scan').classList.contains('on'))$('sessChip').textContent=curSess()==='am'?'Umaga':'Hapon'},30000);
 })();
