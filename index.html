@@ -2552,6 +2552,7 @@ const pad=n=>String(n).padStart(2,'0');
 const ymd=(y,m,d)=>y+'-'+pad(m)+'-'+pad(d);
 const todayStr=()=>{const d=new Date();return ymd(d.getFullYear(),d.getMonth()+1,d.getDate())};
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+const f12=t=>{if(!t)return '';const a=t.split(':').map(Number);return ((a[0]%12)||12)+':'+pad(a[1])+' '+(a[0]<12?'AM':'PM')};
 const thisMonth=()=>todayStr().slice(0,7);
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WL=['','M','T','W','TH','F',''];
@@ -2616,10 +2617,10 @@ function doScan(raw){
   if(!L){showResult('bad','Hindi nahanap ang QR/LRN',code);beep(false);return}
   const d=todayStr(),t=nowHM(),sess=curSess();
   const r=S.records[d]=S.records[d]||{};const e=r[code]=r[code]||{};
-  if(e[sess]){showResult('dup',nameOf(L),'Na-scan na ang '+(sess==='am'?'umaga':'hapon')+' kanina, '+e[sess]);beep(false);return}
+  if(e[sess]){showResult('dup',nameOf(L),'Na-scan na ang '+(sess==='am'?'umaga':'hapon')+' kanina, '+f12(e[sess]));beep(false);return}
   e[sess]=t;if(S.dayState[d]==='off')S.dayState[d]='class';save();
   const late=sess==='am'&&t>S.settings.amLate;
-  showResult(late?'late':'ok',nameOf(L),(sess==='am'?'Umaga ':'Hapon ')+t+(late?' · Late':' · Naitala'));
+  showResult(late?'late':'ok',nameOf(L),(sess==='am'?'Umaga ':'Hapon ')+f12(t)+(late?' · Late':' · Naitala'));
   beep(true);renderScan();
 }
 function renderScan(){
@@ -2630,7 +2631,7 @@ function renderScan(){
   const rows=[];
   Object.keys(rec).forEach(lrn=>{const L=S.learners.find(l=>l.lrn===lrn);if(!L)return;['am','pm'].forEach(s=>{if(rec[lrn][s])rows.push({t:rec[lrn][s],n:nameOf(L),s})})});
   rows.sort((a,b)=>b.t.localeCompare(a.t));
-  $('scanList').innerHTML=rows.length?rows.slice(0,40).map(r=>'<tr><td>'+r.t+'</td><td>'+esc(r.n)+'</td><td>'+(r.s==='am'?'Umaga':'Hapon')+'</td></tr>').join(''):'<tr><td colspan="3" class="empty">Wala pang na-scan ngayon.</td></tr>';
+  $('scanList').innerHTML=rows.length?rows.slice(0,40).map(r=>'<tr><td>'+f12(r.t)+'</td><td>'+esc(r.n)+'</td><td>'+(r.s==='am'?'Umaga':'Hapon')+'</td></tr>').join(''):'<tr><td colspan="3" class="empty">Wala pang na-scan ngayon.</td></tr>';
   const sts=S.learners.map(l=>status(d,l.lrn));
   $('todayStat').innerHTML=chips(sts,S.learners.length);
 }
@@ -2674,7 +2675,7 @@ function renderDay(){
     const e=(S.records[d]||{})[l.lrn]||{};const s=cd?status(d,l.lrn):'';
     const lab=s===''?'<span class="b N">–</span>':'<span class="b '+s+'">'+s+'</span>';
     const btn=['P','L','C','A'].map(v=>'<button class="btn sec sm" data-lrn="'+l.lrn+'" data-v="'+v+'"'+(e.ov===v?' style="background:#d6e9df"':'')+'>'+v+'</button>').join(' ')+' <button class="btn sec sm" data-lrn="'+l.lrn+'" data-v="">Auto</button>';
-    return '<tr><td>'+(i+1)+'</td><td>'+esc(nameOf(l))+'</td><td>'+(e.am||'')+'</td><td>'+(e.pm||'')+'</td><td>'+lab+(e.ov?' <span class="hint">(manual)</span>':'')+'</td><td style="white-space:nowrap">'+btn+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+esc(nameOf(l))+'</td><td>'+f12(e.am)+'</td><td>'+f12(e.pm)+'</td><td>'+lab+(e.ov?' <span class="hint">(manual)</span>':'')+'</td><td style="white-space:nowrap">'+btn+'</td></tr>';
   }).join('');
 }
 $('dayDate').onchange=renderDay;
