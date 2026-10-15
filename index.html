@@ -102,9 +102,8 @@ table.sum td:first-child{text-align:left}
 </style>
 </head>
 <body>
-<div id="loading" style="position:fixed;inset:0;background:#f2f5f0;display:flex;align-items:center;justify-content:center;z-index:50;font-size:16px;padding:20px;text-align:center">Kinukuha ang data mula sa Google Sheet…</div>
 <header>
-  <h1>QR Attendance <small id="sync" style="font:12px system-ui,sans-serif;opacity:.85"></small></h1>
+  <h1>QR Attendance</h1>
   <p id="hdrClass">Pag-scan ng QR → awtomatikong SF2</p>
 </header>
 <nav id="nav">
@@ -128,9 +127,6 @@ table.sum td:first-child{text-align:left}
     <div id="reader"></div>
     <div class="row" style="justify-content:center">
       <button class="btn" id="camBtn">Buksan ang camera</button>
-      <button class="btn sec" id="picBtn">I-scan gamit ang larawan</button>
-      <input type="file" id="picFile" accept="image/*" capture="environment" style="display:none">
-      <div id="fileReader" style="display:none"></div>
     </div>
     <p class="hint" id="camMsg" style="text-align:center;margin:8px 0 0"></p>
     <div id="result" class="result" style="display:none"></div>
@@ -205,7 +201,7 @@ table.sum td:first-child{text-align:left}
 
   <div class="card">
     <h2>Backup at data</h2>
-    <p class="hint">Awtomatikong nase-save ang data sa Google Sheet (mga tab na Roster, Attendance, Settings, DayState). Pwede pa ring mag-download ng backup.</p>
+    <p class="hint">Naka-save ang data sa browser ng device na ito lang. Mag-download ng backup paminsan-minsan.</p>
     <div class="row">
       <button class="btn sec" id="bkBtn">I-download ang backup</button>
       <button class="btn sec" id="restBtn">I-restore mula sa backup</button>
@@ -2544,6 +2540,7 @@ var qrcode = function() {
 <script>
 (function(){
 'use strict';
+const KEY='qr_attendance_v1';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -2555,18 +2552,11 @@ const MONTHS=['January','February','March','April','May','June','July','August',
 const WL=['','M','T','W','TH','F',''];
 
 const DEF={settings:{school:'',schoolId:'',sy:'2026-2027',grade:'',section:'',teacher:'',head:'',amLate:'07:30',pmStart:'12:00',pmEnd:'16:00'},learners:[],records:{},dayState:{}};
-let S=JSON.parse(JSON.stringify(DEF));
-function norm(){S.settings=Object.assign({},DEF.settings,S.settings||{});S.records=S.records||{};S.dayState=S.dayState||{};S.learners=S.learners||[]}
-let dirty=false,saving=false,tS=null;
-const setSync=m=>{const e=$('sync');if(e)e.textContent=m};
-function save(){dirty=true;setSync('Sine-save…');clearTimeout(tS);tS=setTimeout(flush,700)}
-function flush(){
-  if(saving||!dirty)return;saving=true;dirty=false;
-  google.script.run.withSuccessHandler(()=>{saving=false;if(dirty)flush();else setSync('✓ Naka-save sa Sheet')})
-   .withFailureHandler(err=>{saving=false;dirty=true;setSync('⚠ Hindi na-save');toast('Hindi na-save sa Sheet: '+(err&&err.message||err))})
-   .saveState(JSON.stringify(S));
-}
-window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();e.returnValue=''}});
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY));}catch(e){S=null}
+if(!S||!S.learners)S=JSON.parse(JSON.stringify(DEF));
+S.settings=Object.assign({},DEF.settings,S.settings||{});S.records=S.records||{};S.dayState=S.dayState||{};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Hindi ma-save sa browser. Mag-download ng backup.')}}
 let tT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2600)}
 
 /* ---------- learners ---------- */
@@ -2652,7 +2642,7 @@ async function startCam(){
       const n=Date.now();if(txt===lastCode&&n-lastAt<3000)return;lastCode=txt;lastAt=n;doScan(txt)},()=>{});
     camOn=true;$('camBtn').textContent='Isara ang camera';$('camMsg').textContent='Itapat ang QR sa camera.';
   }catch(err){
-    $('camMsg').textContent='Hindi mabuksan ang live camera sa loob ng Google Apps Script. Gamitin ang “I-scan gamit ang larawan” (isang tap bawat bata) o i-type ang LRN.';
+    $('camMsg').textContent='Hindi mabuksan ang camera. Payagan ang camera permission at buksan ang app sa https:// o mula sa file. Pwede pa ring i-type ang LRN sa ibaba.';
   }
 }
 async function stopCam(){
@@ -2660,12 +2650,6 @@ async function stopCam(){
   camOn=false;$('camBtn').textContent='Buksan ang camera';
 }
 $('camBtn').onclick=()=>camOn?stopCam():startCam();
-$('picBtn').onclick=()=>$('picFile').click();
-$('picFile').onchange=async e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{const fs=new Html5Qrcode('fileReader',{formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE]});const txt=await fs.scanFile(f,false);doScan(txt)}
-  catch(err){showResult('bad','Walang nabasang QR','Ulitin ang kuha: mas malapit, mas maliwanag, nasa gitna ang QR.');beep(false)}
-};
 $('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;renderScan()};
 $('manualBtn').onclick=()=>{doScan($('manual').value);$('manual').value='';$('manual').focus()};
 $('manual').addEventListener('keydown',e=>{if(e.key==='Enter')$('manualBtn').click()});
@@ -2736,12 +2720,12 @@ $('sampleBtn').onclick=()=>{
   if(!S.settings.section){S.settings.grade='Grade 7';S.settings.section='Sample';S.settings.school='Sample School'}
   save();renderRoster();renderHeader();toast('Naidagdag ang sample na data.');
 };
-$('clearBtn').onclick=()=>{if(confirm('Buburahin ang LAHAT ng learners at attendance sa Google Sheet. Sigurado ka ba?')){S=JSON.parse(JSON.stringify(DEF));save();renderRoster();renderHeader()}};
+$('clearBtn').onclick=()=>{if(confirm('Buburahin ang LAHAT ng learners at attendance sa device na ito. Sigurado ka ba?')){S=JSON.parse(JSON.stringify(DEF));save();renderRoster();renderHeader()}};
 $('bkBtn').onclick=()=>dl(JSON.stringify(S),'qr-attendance-backup-'+todayStr()+'.json','application/json');
 $('restBtn').onclick=()=>$('restFile').click();
 $('restFile').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.learners)throw 0;S=x;norm();save();renderRoster();renderHeader();toast('Na-restore.')}catch(err){toast('Hindi tamang backup file.')}};
+  r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.learners)throw 0;S=x;S.settings=Object.assign({},DEF.settings,S.settings||{});S.records=S.records||{};S.dayState=S.dayState||{};save();renderRoster();renderHeader();toast('Na-restore.')}catch(err){toast('Hindi tamang backup file.')}};
   r.readAsText(f);e.target.value='';
 };
 function dl(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
@@ -2846,10 +2830,7 @@ $('csvBtn').onclick=()=>{
 };
 
 /* ---------- init ---------- */
-function boot(){renderHeader();renderScan()}
-google.script.run.withSuccessHandler(st=>{if(st&&st.learners){S=st;norm()}$('loading').style.display='none';setSync('✓ Naka-save sa Sheet');boot()})
- .withFailureHandler(err=>{$('loading').innerHTML='Hindi makuha ang data: '+esc(err&&err.message||err)+'<br>I-reload ang pahina.'})
- .getState();
+renderHeader();renderScan();
 setInterval(()=>{if($('tab-scan').classList.contains('on'))$('sessChip').textContent=curSess()==='am'?'Umaga':'Hapon'},30000);
 })();
 </script>
